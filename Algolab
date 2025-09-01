@@ -1,0 +1,482 @@
+import tkinter as tk
+from tkinter import scrolledtext, messagebox, ttk
+import webbrowser
+from algosdk import account, mnemonic, transaction
+from algosdk.v2client import algod
+
+# Algorand Testnet Node
+ALGOD_ADDRESS = "https://testnet-api.algonode.cloud"
+ALGOD_TOKEN = ""
+algod_client = algod.AlgodClient(ALGOD_TOKEN, ALGOD_ADDRESS)
+
+# Global vars
+private_key = None
+address = None
+mnemonic_phrase = None
+
+# Professional Color Scheme
+COLORS = {
+    'bg_primary': '#0f0f0f',  # Deep black
+    'bg_secondary': '#1a1a1a',  # Charcoal
+    'bg_tertiary': '#2d2d2d',  # Dark gray
+    'accent_gold': '#ffd700',  # Pure gold
+    'accent_dark_gold': '#b8860b',  # Dark gold
+    'text_primary': '#ffffff',  # White
+    'text_secondary': '#cccccc',  # Light gray
+    'text_accent': '#ffd700',  # Gold text
+    'border': '#444444',  # Border gray
+    'success': '#00ff88',  # Success green
+    'error': '#ff4444'  # Error red
+}
+
+
+class AlgoLab:
+    def __init__(self, root):
+        self.root = root
+        self.setup_window()
+        self.create_widgets()
+
+    def setup_window(self):
+        self.root.title("Algo Lab - Professional Edition")
+        self.root.geometry("900x700")
+        self.root.configure(bg=COLORS['bg_primary'])
+        self.root.resizable(True, True)
+
+        # Configure style for ttk widgets
+        style = ttk.Style()
+        style.theme_use('clam')
+
+        # Configure styles
+        style.configure('Gold.TButton',
+                        background=COLORS['accent_gold'],
+                        foreground='black',
+                        borderwidth=0,
+                        focuscolor='none',
+                        relief='flat',
+                        font=('Segoe UI', 10, 'bold'))
+
+        style.map('Gold.TButton',
+                  background=[('active', COLORS['accent_dark_gold']),
+                              ('pressed', COLORS['accent_dark_gold'])])
+
+    def create_widgets(self):
+        # Main container
+        main_frame = tk.Frame(self.root, bg=COLORS['bg_primary'])
+        main_frame.pack(fill='both', expand=True, padx=20, pady=20)
+
+        # Header
+        self.create_header(main_frame)
+
+        # Control Panel
+        self.create_control_panel(main_frame)
+
+        # Output Panel
+        self.create_output_panel(main_frame)
+
+        # Status Bar
+        self.create_status_bar(main_frame)
+
+    def create_header(self, parent):
+        header_frame = tk.Frame(parent, bg=COLORS['bg_primary'])
+        header_frame.pack(fill='x', pady=(0, 20))
+
+        # Company name in top corner
+        company_label = tk.Label(header_frame,
+                                 text="BaqarAlgo",
+                                 font=('Segoe UI', 12, 'bold'),
+                                 fg=COLORS['accent_gold'],
+                                 bg=COLORS['bg_primary'])
+        company_label.pack(anchor='ne', pady=(0, 10))
+
+        # Title
+        title_label = tk.Label(header_frame,
+                               text="ALGO LAB",
+                               font=('Segoe UI', 24, 'bold'),
+                               fg=COLORS['accent_gold'],
+                               bg=COLORS['bg_primary'])
+        title_label.pack()
+
+        # Subtitle
+        subtitle_label = tk.Label(header_frame,
+                                  text="Professional Algorand Development Laboratory",
+                                  font=('Segoe UI', 11),
+                                  fg=COLORS['text_secondary'],
+                                  bg=COLORS['bg_primary'])
+        subtitle_label.pack(pady=(5, 0))
+
+        # Separator line
+        separator = tk.Frame(header_frame, height=2, bg=COLORS['accent_gold'])
+        separator.pack(fill='x', pady=(15, 0))
+
+    def create_control_panel(self, parent):
+        control_frame = tk.Frame(parent, bg=COLORS['bg_secondary'], relief='raised', bd=1)
+        control_frame.pack(fill='x', pady=(0, 20))
+
+        # Control panel title
+        control_title = tk.Label(control_frame,
+                                 text="CONTROL PANEL",
+                                 font=('Segoe UI', 14, 'bold'),
+                                 fg=COLORS['text_primary'],
+                                 bg=COLORS['bg_secondary'])
+        control_title.pack(pady=(15, 10))
+
+        # Button container
+        button_container = tk.Frame(control_frame, bg=COLORS['bg_secondary'])
+        button_container.pack(pady=(0, 15))
+
+        # Create two rows of buttons
+        row1 = tk.Frame(button_container, bg=COLORS['bg_secondary'])
+        row1.pack(pady=5)
+
+        row2 = tk.Frame(button_container, bg=COLORS['bg_secondary'])
+        row2.pack(pady=5)
+
+        # Button styling function
+        def create_button(parent, text, command, icon=""):
+            btn_frame = tk.Frame(parent, bg=COLORS['bg_tertiary'], relief='raised', bd=1)
+            btn_frame.pack(side='left', padx=8, pady=5)
+
+            button = tk.Button(btn_frame,
+                               text=f"{icon} {text}",
+                               command=command,
+                               bg=COLORS['accent_gold'],
+                               fg='black',
+                               font=('Segoe UI', 10, 'bold'),
+                               width=18,
+                               height=2,
+                               relief='flat',
+                               cursor='hand2',
+                               activebackground=COLORS['accent_dark_gold'],
+                               activeforeground='black')
+            button.pack(padx=2, pady=2)
+
+            # Hover effects
+            def on_enter(e):
+                button.config(bg=COLORS['accent_dark_gold'])
+
+            def on_leave(e):
+                button.config(bg=COLORS['accent_gold'])
+
+            button.bind('<Enter>', on_enter)
+            button.bind('<Leave>', on_leave)
+
+        # Row 1 buttons
+        create_button(row1, "Create Account", self.create_account, "🔑")
+        create_button(row1, "Copy Address", self.copy_address, "📋")
+        create_button(row1, "Copy Mnemonic", self.copy_mnemonic, "🔐")
+
+        # Row 2 buttons
+        create_button(row2, "Open Faucet", self.open_faucet, "💧")
+        create_button(row2, "Check Balance", self.check_balance, "💰")
+        create_button(row2, "Create ASA", self.create_asa, "🪙")
+
+    def create_output_panel(self, parent):
+        output_frame = tk.Frame(parent, bg=COLORS['bg_secondary'], relief='raised', bd=1)
+        output_frame.pack(fill='both', expand=True)
+
+        # Output panel title
+        output_title = tk.Label(output_frame,
+                                text="TRANSACTION LOG",
+                                font=('Segoe UI', 14, 'bold'),
+                                fg=COLORS['text_primary'],
+                                bg=COLORS['bg_secondary'])
+        output_title.pack(pady=(15, 10))
+
+        # Text area container
+        text_container = tk.Frame(output_frame, bg=COLORS['bg_secondary'])
+        text_container.pack(fill='both', expand=True, padx=15, pady=(0, 15))
+
+        # Scrolled text area
+        self.text_area = scrolledtext.ScrolledText(
+            text_container,
+            wrap=tk.WORD,
+            width=100,
+            height=20,
+            bg=COLORS['bg_tertiary'],
+            fg=COLORS['text_primary'],
+            font=('Consolas', 11),
+            insertbackground=COLORS['accent_gold'],
+            selectbackground=COLORS['accent_dark_gold'],
+            selectforeground='black',
+            relief='flat',
+            bd=5
+        )
+        self.text_area.pack(fill='both', expand=True)
+
+        # Welcome message
+        welcome_msg = """═══════════════════════════════════════════════════════════════════════════════
+🧪 WELCOME TO ALGO LAB - PROFESSIONAL EDITION 🧪
+═══════════════════════════════════════════════════════════════════════════════
+
+This professional laboratory provides comprehensive Algorand testnet functionality:
+• Secure account generation with industry-standard encryption
+• Seamless faucet integration for test ALGO acquisition  
+• Real-time balance monitoring and transaction tracking
+• Professional ASA (Algorand Standard Asset) creation tools
+
+🔐 Security Notice: All operations are performed on Algorand Testnet
+💡 Pro Tip: Create your account first, then use the faucet to get test ALGOs
+
+Ready to begin your Algorand experiments? Click 'Create Account' to start!
+═══════════════════════════════════════════════════════════════════════════════
+"""
+        self.text_area.insert(tk.END, welcome_msg)
+
+    def create_status_bar(self, parent):
+        status_frame = tk.Frame(parent, bg=COLORS['bg_primary'], height=30)
+        status_frame.pack(fill='x', pady=(10, 0))
+        status_frame.pack_propagate(False)
+
+        # Status indicator
+        self.status_label = tk.Label(status_frame,
+                                     text="● Ready - Algorand Testnet Connected",
+                                     font=('Segoe UI', 9),
+                                     fg=COLORS['success'],
+                                     bg=COLORS['bg_primary'],
+                                     anchor='w')
+        self.status_label.pack(side='left', padx=5)
+
+        # Network info
+        network_label = tk.Label(status_frame,
+                                 text="Network: Testnet | Node: AlgoNode Cloud",
+                                 font=('Segoe UI', 9),
+                                 fg=COLORS['text_secondary'],
+                                 bg=COLORS['bg_primary'],
+                                 anchor='e')
+        network_label.pack(side='right', padx=5)
+
+    def log_message(self, message, msg_type="info"):
+        """Enhanced logging with formatting"""
+        colors = {
+            'info': COLORS['text_primary'],
+            'success': COLORS['success'],
+            'error': COLORS['error'],
+            'gold': COLORS['accent_gold']
+        }
+
+        self.text_area.insert(tk.END, f"\n{message}\n")
+        self.text_area.see(tk.END)
+
+    def create_account(self):
+        global private_key, address, mnemonic_phrase
+
+        try:
+            private_key, address = account.generate_account()
+            mnemonic_phrase = mnemonic.from_private_key(private_key)
+
+            self.text_area.delete(1.0, tk.END)
+
+            success_msg = f"""═══════════════════════════════════════════════════════════════════════════════
+🎉 ACCOUNT CREATION SUCCESSFUL 🎉
+═══════════════════════════════════════════════════════════════════════════════
+
+🏦 Account Address:
+{address}
+
+🔑 Recovery Phrase (25 words):
+{mnemonic_phrase}
+
+⚠️  SECURITY REMINDER:
+• Store your mnemonic phrase securely - it's your account recovery key
+• Never share your private key or mnemonic with anyone
+• This is a TESTNET account - not for mainnet use
+
+🎯 NEXT STEPS:
+1. Copy your address using the 'Copy Address' button
+2. Visit the faucet to claim test ALGOs
+3. Check your balance after faucet funding
+
+═══════════════════════════════════════════════════════════════════════════════"""
+
+            self.text_area.insert(tk.END, success_msg)
+            self.status_label.config(text="● Account Created Successfully", fg=COLORS['success'])
+
+            messagebox.showinfo("Account Created",
+                                "✅ New testnet account created successfully!\n\n"
+                                "💡 Use 'Copy Address' then 'Open Faucet' to get test ALGOs.")
+
+        except Exception as e:
+            error_msg = f"❌ Account creation failed: {str(e)}"
+            self.log_message(error_msg)
+            self.status_label.config(text="● Account Creation Failed", fg=COLORS['error'])
+
+    def copy_address(self):
+        if not address:
+            messagebox.showerror("❌ Error", "No address available!\n\nPlease create an account first.")
+            return
+
+        self.root.clipboard_clear()
+        self.root.clipboard_append(address)
+
+        self.log_message(f"📋 Address copied to clipboard: {address[:20]}...")
+        messagebox.showinfo("✅ Copied", "Address successfully copied to clipboard!")
+
+    def copy_mnemonic(self):
+        if not mnemonic_phrase:
+            messagebox.showerror("❌ Error", "No mnemonic available!\n\nPlease create an account first.")
+            return
+
+        self.root.clipboard_clear()
+        self.root.clipboard_append(mnemonic_phrase)
+
+        self.log_message("🔐 Mnemonic phrase copied to clipboard (handle with care!)")
+        messagebox.showinfo("✅ Copied", "Mnemonic phrase successfully copied to clipboard!\n\n⚠️ Keep it secure!")
+
+    def open_faucet(self):
+        if not address:
+            messagebox.showerror("❌ Error", "Create account first!\n\nYou need an address to use the faucet.")
+            return
+
+        faucet_url = f"https://bank.testnet.algorand.network/?account={address}"
+        webbrowser.open(faucet_url)
+
+        self.log_message(f"🌐 Opening faucet in browser for address: {address[:20]}...")
+        self.log_message("💧 Claim your test ALGOs from the faucet, then check your balance!")
+
+    def check_balance(self):
+        if not address:
+            messagebox.showerror("❌ Error", "Create account first!\n\nYou need an address to check balance.")
+            return
+
+        try:
+            self.status_label.config(text="● Checking Balance...", fg=COLORS['accent_gold'])
+            self.root.update()
+
+            account_info = algod_client.account_info(address)
+            amount = account_info.get("amount") / 1e6
+
+            balance_msg = f"""
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 💰 BALANCE INQUIRY RESULT                                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Account: {address[:25]}...                              │
+│ Balance: {amount:,.6f} ALGO                                                 │
+│ Status:  {'✅ Funded' if amount > 0 else '⚠️  Needs Funding'}                                                    │
+└─────────────────────────────────────────────────────────────────────────────┘"""
+
+            self.log_message(balance_msg)
+            self.status_label.config(text=f"● Balance: {amount} ALGO", fg=COLORS['success'])
+
+        except Exception as e:
+            error_msg = f"❌ Balance check failed: {str(e)}"
+            self.log_message(error_msg)
+            self.status_label.config(text="● Balance Check Failed", fg=COLORS['error'])
+
+    def create_asa(self):
+        if not address or not private_key:
+            messagebox.showerror("❌ Error", "Create account first!\n\nYou need an account to create assets.")
+            return
+
+        try:
+            self.status_label.config(text="● Creating ASA...", fg=COLORS['accent_gold'])
+            self.root.update()
+
+            creation_msg = f"""
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ 🪙 ASA CREATION INITIATED                                                   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Creator: {address[:25]}...                              │
+│ Asset Name: VIP Token                                                       │
+│ Unit Name: VIP                                                              │
+│ Total Supply: 1,000,000                                                     │
+│ Decimals: 0                                                                 │
+└─────────────────────────────────────────────────────────────────────────────┘"""
+
+            self.log_message(creation_msg)
+
+            params = algod_client.suggested_params()
+            txn = transaction.AssetConfigTxn(
+                sender=address,
+                sp=params,
+                total=1000000,
+                default_frozen=False,
+                unit_name="VIP",
+                asset_name="VIP Token",
+                manager=address,
+                reserve=address,
+                freeze=address,
+                clawback=address,
+                decimals=0
+            )
+
+            stxn = txn.sign(private_key)
+            txid = algod_client.send_transaction(stxn)
+
+            self.log_message(f"⏳ Transaction submitted to network...")
+            self.log_message(f"📝 Transaction ID: {txid}")
+
+            result = transaction.wait_for_confirmation(algod_client, txid, 4)
+            asset_id = result["asset-index"]
+
+            success_msg = f"""
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ✅ ASA CREATION SUCCESSFUL!                                                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ Asset ID: {asset_id}                                                        │
+│ Transaction: {txid[:25]}...                             │
+│ Block: {result.get('confirmed-round', 'N/A')}                                                            │
+│ Status: CONFIRMED ✅                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+🎊 Congratulations! Your VIP Token has been successfully created on Algorand Testnet!
+🔗 You can view this asset on any Algorand explorer using Asset ID: {asset_id}"""
+
+            self.log_message(success_msg)
+            self.status_label.config(text=f"● ASA Created - ID: {asset_id}", fg=COLORS['success'])
+
+            messagebox.showinfo("🎉 Success!",
+                                f"ASA Created Successfully!\n\n"
+                                f"Asset ID: {asset_id}\n"
+                                f"Asset Name: VIP Token\n"
+                                f"Total Supply: 1,000,000 VIP")
+
+        except Exception as e:
+            error_msg = f"❌ ASA creation failed: {str(e)}"
+            self.log_message(error_msg)
+            self.status_label.config(text="● ASA Creation Failed", fg=COLORS['error'])
+            messagebox.showerror("❌ Error", f"ASA creation failed:\n\n{str(e)}")
+
+
+# GUI Functions (keeping original function names for compatibility)
+def create_account():
+    app.create_account()
+
+
+def copy_address():
+    app.copy_address()
+
+
+def copy_mnemonic():
+    app.copy_mnemonic()
+
+
+def open_faucet():
+    app.open_faucet()
+
+
+def check_balance():
+    app.check_balance()
+
+
+def create_asa():
+    app.create_asa()
+
+
+# Main Application
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = AlgoLab(root)
+
+    # Set window icon (if available)
+    try:
+        root.iconbitmap('')  # Add your icon path here if you have one
+    except:
+        pass
+
+    # Center window on screen
+    root.update_idletasks()
+    x = (root.winfo_screenwidth() // 2) - (root.winfo_width() // 2)
+    y = (root.winfo_screenheight() // 2) - (root.winfo_height() // 2)
+    root.geometry(f"+{x}+{y}")
+
+    root.mainloop()
